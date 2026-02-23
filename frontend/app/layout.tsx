@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Manrope } from "next/font/google";
+import BagFloatingButton from "@/components/cart/BagFloatingButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({
         className={`${manrope.className} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <BagFloatingButton />
       </body>
     </html>
   );

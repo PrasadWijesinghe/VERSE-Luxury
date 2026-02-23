@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import AuthPrimaryButton from "@/components/auth/AuthPrimaryButton";
 
 const loginImageSrc = "/images/login/SignUP_IN.png";
 
@@ -125,12 +126,7 @@ export default function SignInPage() {
               </a>
             </div>
 
-            <button
-              type="button"
-              className="w-full rounded-md bg-black px-4 py-3 text-xs tracking-[0.35em] uppercase text-white hover:bg-black/90 transition"
-            >
-              Sign in
-            </button>
+            <AuthPrimaryButton label="Sign in" />
 
             <div className="pt-4">
               <div className="flex items-center gap-4">

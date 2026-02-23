@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getIsAuthed } from "../account/session";
 
 const nav = [
   { label: "Signature", href: "/#signature" },
@@ -13,6 +14,7 @@ const nav = [
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isOpaque = scrolled || !isHome;
@@ -23,6 +25,18 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    setAuthed(getIsAuthed());
+
+    const onStorage = () => setAuthed(getIsAuthed());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  useEffect(() => {
+    setAuthed(getIsAuthed());
+  }, [pathname]);
 
   return (
     <header
@@ -57,10 +71,10 @@ export default function Navbar() {
         {/* Actions */}
         <div className="ml-auto flex items-center">
           <Link
-            href="/sign-in"
+            href={authed ? "/account" : "/sign-in"}
             className="rounded-full bg-white text-black px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-white/90 transition"
           >
-            Sign in
+            {authed ? "Account" : "Sign in"}
           </Link>
         </div>
       </nav>

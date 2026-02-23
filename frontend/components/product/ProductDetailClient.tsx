@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { Product } from "@/data/products";
+import { cartActions } from "@/components/cart/useCart";
 
 function formatPrice(price: number, currency: string) {
   try {
@@ -233,6 +234,7 @@ export default function ProductDetailClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
+                  onClick={() => cartActions.addToCart(product.id, quantity)}
                   className="h-12 bg-black text-white text-xs uppercase tracking-[0.35em] hover:bg-black/90 transition"
                 >
                   Add to bag
