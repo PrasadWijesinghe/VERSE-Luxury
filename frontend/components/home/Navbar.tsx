@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const nav = [
-  { label: "Collections", href: "/collections" },
   { label: "Signature", href: "/#signature" },
   { label: "New Arrivals", href: "/#new" },
   { label: "About", href: "/#about" },
+  { label: "Newsletter", href: "/#contact" },
 ] as const;
 
 export default function Navbar() {
@@ -56,9 +56,12 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="ml-auto flex items-center">
-          <button className="rounded-full bg-white text-black px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-white/90 transition">
+          <Link
+            href="/sign-in"
+            className="rounded-full bg-white text-black px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-white/90 transition"
+          >
             Sign in
-          </button>
+          </Link>
         </div>
       </nav>
     </header>
