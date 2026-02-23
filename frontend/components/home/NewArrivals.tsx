@@ -1,50 +1,41 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useRef } from "react";
 
+import { products as allProducts } from "@/data/products";
+
 type Arrival = {
-  id: string;
+  id: number;
   name: string;
   price: string;
   tag?: string;
   image: string;
 };
 
+function formatPrice(price: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(price);
+  } catch {
+    return `${currency} ${price}`;
+  }
+}
+
 export default function NewArrivals() {
-  const products: Arrival[] = useMemo(
-    () => [
-      {
-        id: "a1",
-        name: "Structured Wool Blazer",
-        price: "$2,850",
-        tag: "Exclusive",
-        image: "/images/NewArrival/Arrival1.jpg",
-      },
-      {
-        id: "a2",
-        name: "Artisan Leather Tote",
-        price: "$3,100",
-        tag: "New",
-        image: "/images/NewArrival/Arrival2.jpg",
-      },
-      {
-        id: "a3",
-        name: "Heritage Silk Scarf",
-        price: "$750",
-        tag: "Limited",
-        image: "/images/NewArrival/Arrival3.jpg",
-      },
-      {
-        id: "a4",
-        name: "Titanium Aviator Frames",
-        price: "$980",
-        tag: "New",
-        image: "/images/NewArrival/Arrival4.jpg",
-      },
-    ],
-    []
-  );
+  const products: Arrival[] = useMemo(() => {
+    return allProducts.slice(0, 8).map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: formatPrice(p.price, p.currency),
+      tag: p.tag,
+      image: p.images[0],
+    }));
+  }, []);
 
   const railRef = useRef<HTMLDivElement | null>(null);
 
@@ -111,7 +102,7 @@ export default function NewArrivals() {
               data-arrival-card
               className="shrink-0 w-72 sm:w-80 lg:w-96"
             >
-              <a href="#" className="group block">
+              <Link href={`/product/${p.id}`} className="group block">
                 <div className="relative h-96 w-full overflow-hidden bg-black">
                   <Image
                     src={p.image}
@@ -132,7 +123,7 @@ export default function NewArrivals() {
                   <div className="text-sm text-stone-900">{p.name}</div>
                   <div className="mt-2 text-sm text-amber-700">{p.price}</div>
                 </div>
-              </a>
+              </Link>
             </article>
           ))}
         </div>

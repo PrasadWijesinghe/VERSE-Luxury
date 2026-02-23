@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Hero() {
@@ -57,12 +58,12 @@ export default function Hero() {
               SPRING/SUMMER 2025 COLLECTION
             </p>
 
-            <a
-              href="#collections"
+            <Link
+              href="/collections"
               className="mt-10 inline-flex items-center justify-center gap-3 border border-white/40 px-8 py-4 text-[10px] sm:text-xs tracking-[0.45em] text-white/90 hover:bg-white/10 transition"
             >
               EXPLORE COLLECTION <span aria-hidden>→</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

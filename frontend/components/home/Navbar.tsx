@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const nav = [
-  { label: "Collections", href: "/#collections" },
+  { label: "Collections", href: "/collections" },
   { label: "Signature", href: "/#signature" },
   { label: "New Arrivals", href: "/#new" },
   { label: "About", href: "/#about" },
@@ -12,6 +13,9 @@ const nav = [
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const isOpaque = scrolled || !isHome;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -24,7 +28,7 @@ export default function Navbar() {
     <header
       className={[
         "fixed top-0 inset-x-0 z-50 transition",
-        scrolled
+        isOpaque
           ? "bg-black/70 backdrop-blur border-b border-white/10"
           : "bg-transparent",
       ].join(" ")}

@@ -1,4 +1,7 @@
 import Image from "next/image";
+import Link from "next/link";
+
+import { products, type Product } from "@/data/products";
 
 type Piece = {
   key: string;
@@ -10,31 +13,42 @@ type Piece = {
   price?: string;
 };
 
-const pieces: Piece[] = [
-  {
-    key: "haute",
-    tag: "Haute Couture",
-    image: "/images/Signature/Signature1.png",
-    href: "#",
-    layout: "tall",
-  },
-  {
-    key: "accessories",
-    tag: "Maison Accessories",
-    title: "Gilded Leather Clutch",
-    price: "$2,650",
-    image: "/images/Signature/Signature2.png",
-    href: "#",
-    layout: "wide",
-  },
-  {
-    key: "pret",
-    tag: "Prêt-à-porter",
-    image: "/images/Signature/Signature3.png",
-    href: "#",
-    layout: "wide",
-  },
-];
+function formatPrice(price: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(price);
+  } catch {
+    return `${currency} ${price}`;
+  }
+}
+
+const signatureIds = [22, 21, 20] as const;
+
+function isProduct(p: Product | undefined): p is Product {
+  return Boolean(p);
+}
+
+const pieces: Piece[] = signatureIds
+  .map((id) => products.find((p) => p.id === id))
+  .filter(isProduct)
+  .map((p, idx) => {
+    const href = `/product/${p.id}`;
+    const tag = p.tag ?? p.category;
+    const image = p.images?.[0] ?? "/images/hero/Home.png";
+
+    return {
+      key: String(p.id),
+      tag,
+      image,
+      href,
+      layout: idx === 2 ? "tall" : "wide",
+      title: p.name,
+      price: formatPrice(p.price, p.currency),
+    } satisfies Piece;
+  });
 
 export default function SignaturePieces() {
   const tall = pieces.find((p) => p.layout === "tall")!;
@@ -60,7 +74,7 @@ export default function SignaturePieces() {
           </div>
 
           <a
-            href="#"
+            href="/collections"
             className="mt-2 hidden sm:inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.35em] text-stone-500 hover:text-stone-900 transition"
           >
             View all pieces <span aria-hidden>→</span>
@@ -68,7 +82,7 @@ export default function SignaturePieces() {
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:grid-rows-2">
-          <a
+          <Link
             href={tall.href}
             className="group relative overflow-hidden bg-black lg:col-span-1 lg:row-span-2 min-h-130 rounded-sm"
           >
@@ -86,10 +100,10 @@ export default function SignaturePieces() {
                 {tall.tag}
               </span>
             </div>
-          </a>
+          </Link>
 
           {wide.map((p, idx) => (
-            <a
+            <Link
               key={p.key}
               href={p.href}
               className={[
@@ -124,16 +138,16 @@ export default function SignaturePieces() {
                   )}
                 </div>
               )}
-            </a>
+            </Link>
           ))}
         </div>
 
-        <a
-          href="#"
+        <Link
+          href="/collections"
           className="mt-10 inline-flex sm:hidden items-center gap-3 text-[10px] uppercase tracking-[0.35em] text-stone-500 hover:text-stone-900 transition"
         >
           View all pieces <span aria-hidden>→</span>
-        </a>
+        </Link>
       </div>
     </section>
   );
