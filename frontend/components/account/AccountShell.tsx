@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { getInitials, mockUser } from "./mockUser";
-import { getIsAuthed, setIsAuthed } from "./session";
+import { useEffect, useMemo } from "react";
+import { getInitials } from "./mockUser";
+import { clearAuthSession, useAuthSession } from "./session";
 
 const navItems = [
   { label: "Overview", href: "/account" },
@@ -22,32 +22,32 @@ export default function AccountShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [authed, setAuthed] = useState(() => getIsAuthed());
+  const { authed, user } = useAuthSession();
 
   useEffect(() => {
-    if (!authed) router.replace("/sign-in");
-  }, [authed, router]);
-
-  useEffect(() => {
-    const onStorage = () => setAuthed(getIsAuthed());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    if (!authed) {
+      router.replace("/sign-in");
+      return;
+    }
+    if (authed && !user) {
+      clearAuthSession();
+      router.replace("/sign-in");
+    }
+  }, [authed, user, router]);
 
   const initials = useMemo(
-    () => getInitials(mockUser.firstName, mockUser.lastName),
-    []
+    () => getInitials(user?.firstName ?? "", user?.lastName ?? ""),
+    [user?.firstName, user?.lastName]
   );
 
   const onLogout = () => {
-    setIsAuthed(false);
-    setAuthed(false);
+    clearAuthSession();
     router.replace("/sign-in");
   };
 
-  if (!authed) {
-    // Redirect is in progress
-    return <div className="min-h-screen bg-stone-50" />;
+  if (!authed || !user) {
+    // Keep markup consistent between SSR and first client render
+    return <main className="min-h-screen bg-stone-50" />;
   }
 
   return (
@@ -69,12 +69,12 @@ export default function AccountShell({
               </div>
               <div className="mt-3">
                 <div className="text-sm font-medium text-stone-900">
-                  {mockUser.firstName} {mockUser.lastName}
+                    {user.firstName} {user.lastName}
                 </div>
-                <div className="text-xs text-stone-500">{mockUser.email}</div>
+                  <div className="text-xs text-stone-500">{user.email}</div>
               </div>
               <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50 px-3 py-1 text-[11px] text-amber-900">
-                {mockUser.membership}
+                  Member
               </div>
             </div>
 
