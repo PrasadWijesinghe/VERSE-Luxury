@@ -41,7 +41,7 @@ export default function SignInClient() {
       }
 
       setAuthSession({ token: data.token ?? null, user: data.user });
-      router.push("/account");
+      router.push("/");
     } catch {
       setError("Network error. Is the backend running?");
     } finally {
