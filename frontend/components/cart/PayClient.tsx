@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { products } from "@/data/products";
+import { useAuthSession } from "@/components/account/session";
 import { readCart, setCart } from "./cartStore";
 import { useCartLines } from "./useCart";
+import LoginRequiredPopup from "./LoginRequiredPopup";
 
 function formatMoney(value: number, currency: string) {
   try {
@@ -23,6 +25,7 @@ export default function PayClient() {
   const router = useRouter();
   const lines = useCartLines();
   const [processing, setProcessing] = useState(false);
+  const { authed, user } = useAuthSession();
 
   const items = useMemo(() => {
     return lines
@@ -39,6 +42,18 @@ export default function PayClient() {
   const total = useMemo(() => {
     return items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
   }, [items]);
+
+  if (!authed || !user) {
+    return (
+      <section className="container-lux py-10 sm:py-12">
+        <LoginRequiredPopup
+          open
+          onSignIn={() => router.push("/sign-in")}
+          onBackToBag={() => router.push("/bag")}
+        />
+      </section>
+    );
+  }
 
   const onPayNow = async () => {
     if (processing) return;
@@ -86,9 +101,10 @@ export default function PayClient() {
         <button
           type="button"
           onClick={() => router.push("/checkout")}
-          className="rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition"
+          className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition"
         >
-          Close
+          <span aria-hidden>←</span>
+          Back to Checkout
         </button>
       </div>
 

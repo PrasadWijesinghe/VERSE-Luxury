@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { products } from "@/data/products";
+import { useAuthSession } from "@/components/account/session";
+import { LAST_COLLECTIONS_URL_KEY } from "@/components/RouteTracker";
 import { cartActions, useCartLines } from "./useCart";
+import LoginRequiredPopup from "./LoginRequiredPopup";
 
 function formatMoney(value: number, currency: string) {
   try {
@@ -22,6 +25,8 @@ function formatMoney(value: number, currency: string) {
 export default function BagClient() {
   const router = useRouter();
   const lines = useCartLines();
+  const { authed, user } = useAuthSession();
+  const [loginPopupOpen, setLoginPopupOpen] = useState(false);
 
   const items = useMemo(() => {
     return lines
@@ -54,7 +59,14 @@ export default function BagClient() {
 
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => {
+            try {
+              const href = window.sessionStorage.getItem(LAST_COLLECTIONS_URL_KEY);
+              router.push(href || "/collections");
+            } catch {
+              router.push("/collections");
+            }
+          }}
           className="rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition"
         >
           Close
@@ -165,7 +177,13 @@ export default function BagClient() {
 
             <button
               type="button"
-              onClick={() => router.push("/checkout")}
+              onClick={() => {
+                if (!authed || !user) {
+                  setLoginPopupOpen(true);
+                  return;
+                }
+                router.push("/checkout");
+              }}
               className="mt-6 w-full rounded-md bg-black px-5 py-3 text-xs tracking-[0.35em] uppercase text-white hover:bg-black/90 transition"
             >
               Checkout
@@ -173,6 +191,15 @@ export default function BagClient() {
           </aside>
         </div>
       )}
+
+      <LoginRequiredPopup
+        open={loginPopupOpen}
+        onSignIn={() => {
+          setLoginPopupOpen(false);
+          router.push("/sign-in");
+        }}
+        onBackToBag={() => setLoginPopupOpen(false)}
+      />
     </section>
   );
 }

@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { products } from "@/data/products";
+import { useAuthSession } from "@/components/account/session";
 import { useCartLines } from "./useCart";
+import LoginRequiredPopup from "./LoginRequiredPopup";
 
 type Address = {
   title: string;
@@ -60,6 +62,8 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 export default function CheckoutClient() {
   const router = useRouter();
   const lines = useCartLines();
+  const { authed, user } = useAuthSession();
+  const [loginPopupOpen, setLoginPopupOpen] = useState(false);
 
   const items = useMemo(() => {
     return lines
@@ -76,6 +80,18 @@ export default function CheckoutClient() {
   const subtotal = useMemo(() => {
     return items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
   }, [items]);
+
+  if (!authed || !user) {
+    return (
+      <section className="container-lux py-10 sm:py-12">
+        <LoginRequiredPopup
+          open
+          onSignIn={() => router.push("/sign-in")}
+          onBackToBag={() => router.push("/bag")}
+        />
+      </section>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -110,9 +126,10 @@ export default function CheckoutClient() {
         <button
           type="button"
           onClick={() => router.push("/bag")}
-          className="rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition"
+          className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition"
         >
-          Close
+          <span aria-hidden>←</span>
+          Back to Bag
         </button>
       </div>
 
@@ -209,13 +226,31 @@ export default function CheckoutClient() {
 
           <button
             type="button"
-            onClick={() => router.push("/checkout/pay")}
+            onClick={() => {
+              if (!authed || !user) {
+                setLoginPopupOpen(true);
+                return;
+              }
+              router.push("/checkout/pay");
+            }}
             className="mt-6 w-full rounded-md bg-black px-5 py-3 text-xs tracking-[0.35em] uppercase text-white hover:bg-black/90 transition"
           >
             Proceed to Pay
           </button>
         </aside>
       </div>
+
+      <LoginRequiredPopup
+        open={loginPopupOpen}
+        onSignIn={() => {
+          setLoginPopupOpen(false);
+          router.push("/sign-in");
+        }}
+        onBackToBag={() => {
+          setLoginPopupOpen(false);
+          router.push("/bag");
+        }}
+      />
     </section>
   );
 }
