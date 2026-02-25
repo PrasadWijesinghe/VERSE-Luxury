@@ -61,6 +61,9 @@ export async function register(req: Request, res: Response) {
   });
 
   const token = signToken(String(user._id));
+  if (!token) {
+    return res.status(500).json({ message: "Server misconfigured: missing JWT_SECRET" });
+  }
 
   return res.status(201).json({
     user: toPublicUser(user),
@@ -88,6 +91,9 @@ export async function login(req: Request, res: Response) {
   }
 
   const token = signToken(String(user._id));
+  if (!token) {
+    return res.status(500).json({ message: "Server misconfigured: missing JWT_SECRET" });
+  }
 
   return res.json({
     user: toPublicUser(user),

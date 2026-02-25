@@ -2,6 +2,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Stripe checkout setup
+
+This project uses Stripe Checkout from the server (Next.js route handler).
+
+1. Create `frontend/.env.local` from `frontend/.env.local.example`
+2. Set `STRIPE_SECRET_KEY` (server) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (client)
+
 First, run the development server:
 
 ```bash

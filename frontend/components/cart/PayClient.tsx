@@ -1,11 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  CardElement,
+  Elements,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 
 import { products } from "@/data/products";
 import { useAuthSession } from "@/components/account/session";
-import { readCart, setCart } from "./cartStore";
+import { readCart, setCart } from "@/components/cart/cartStore";
 import { useCartLines } from "./useCart";
 import LoginRequiredPopup from "./LoginRequiredPopup";
 
@@ -21,11 +28,172 @@ function formatMoney(value: number, currency: string) {
   }
 }
 
+type StripeConfigResponse = {
+  configured?: boolean;
+  publishableKey?: string | null;
+  error?: string;
+};
+
+function CardCheckoutForm(props: {
+  items: Array<{ productId: number; quantity: number }>;
+  customerEmail: string;
+  customerName: string;
+  totalLabel: string;
+  onSuccess: (paymentIntentId?: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onPay = async () => {
+    if (processing) return;
+    setProcessing(true);
+    setError(null);
+
+    try {
+      if (!stripe || !elements) {
+        throw new Error("Stripe is still loading. Please try again.");
+      }
+
+      const card = elements.getElement(CardElement);
+      if (!card) {
+        throw new Error("Card input not ready.");
+      }
+
+      const intentRes = await fetch("/api/stripe/payment-intent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          items: props.items,
+          customerEmail: props.customerEmail,
+          customerName: props.customerName,
+        }),
+      });
+
+      const intentData = (await intentRes.json()) as {
+        clientSecret?: string | null;
+        error?: string;
+      };
+
+      if (!intentRes.ok) {
+        throw new Error(intentData.error || "Failed to start payment");
+      }
+
+      const clientSecret = intentData.clientSecret;
+      if (!clientSecret) {
+        throw new Error("Missing client secret");
+      }
+
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card,
+          billing_details: {
+            name: props.customerName,
+            email: props.customerEmail,
+          },
+        },
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message || "Payment failed");
+      }
+
+      if (result.paymentIntent?.status !== "succeeded") {
+        throw new Error("Payment not completed");
+      }
+
+      props.onSuccess(result.paymentIntent.id);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Payment failed";
+      setError(message);
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="text-[10px] uppercase tracking-[0.35em] text-stone-500">
+        Card Details
+      </div>
+
+      <div className="mt-5 text-sm text-stone-600">
+        Your card is processed securely by Stripe. If required, Stripe will prompt
+        for card authentication (3D Secure / SCA) without leaving this site.
+      </div>
+
+      {error ? (
+        <div className="mt-6 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-6 rounded-lg border border-stone-200 bg-white px-4 py-3">
+        <CardElement
+          options={{
+            hidePostalCode: true,
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={onPay}
+        disabled={processing || !stripe || !elements}
+        className={[
+          "mt-6 w-full rounded-md px-5 py-3 text-xs tracking-[0.35em] uppercase transition",
+          processing || !stripe || !elements
+            ? "bg-stone-200 text-stone-500 cursor-not-allowed"
+            : "bg-black text-white hover:bg-black/90",
+        ].join(" ")}
+      >
+        {processing ? "Processing..." : `Pay ${props.totalLabel}`}
+      </button>
+    </>
+  );
+}
+
 export default function PayClient() {
   const router = useRouter();
   const lines = useCartLines();
-  const [processing, setProcessing] = useState(false);
   const { authed, user } = useAuthSession();
+  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/stripe/config", { cache: "no-store" });
+        const data = (await res.json()) as StripeConfigResponse;
+
+        const key = (data.publishableKey || "").trim();
+        if (!key) {
+          if (!cancelled) {
+            setPublishableKey(null);
+            setConfigError(data.error || "Stripe is not configured.");
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setPublishableKey(key);
+          setConfigError(null);
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Failed to load Stripe config";
+        if (!cancelled) {
+          setPublishableKey(null);
+          setConfigError(message);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const items = useMemo(() => {
     return lines
@@ -43,6 +211,11 @@ export default function PayClient() {
     return items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
   }, [items]);
 
+  const totalLabel = formatMoney(total, currency);
+  const stripePromise = useMemo(() => {
+    return publishableKey ? loadStripe(publishableKey) : null;
+  }, [publishableKey]);
+
   if (!authed || !user) {
     return (
       <section className="container-lux py-10 sm:py-12">
@@ -54,19 +227,6 @@ export default function PayClient() {
       </section>
     );
   }
-
-  const onPayNow = async () => {
-    if (processing) return;
-    setProcessing(true);
-
-    // simulate a successful payment
-    setCart([]);
-
-    // In case other tabs/windows are open
-    readCart();
-
-    router.push("/account/orders");
-  };
 
   if (items.length === 0) {
     return (
@@ -110,54 +270,28 @@ export default function PayClient() {
 
       <div className="mt-10 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
         <div className="rounded-xl border border-stone-100 bg-white p-6">
-          <div className="text-[10px] uppercase tracking-[0.35em] text-stone-500">
-            Card Details
-          </div>
-
-          <div className="mt-6 space-y-5">
-            <div>
-              <label className="block text-[11px] tracking-[0.28em] uppercase text-stone-500">
-                Cardholder name
-              </label>
-              <input
-                placeholder="Sophia Chen"
-                className="mt-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-stone-300"
+          {!stripePromise ? (
+            <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {configError || "Stripe is not configured."}
+            </div>
+          ) : (
+            <Elements stripe={stripePromise}>
+              <CardCheckoutForm
+                items={lines}
+                customerEmail={user.email}
+                customerName={`${user.firstName} ${user.lastName}`.trim()}
+                totalLabel={totalLabel}
+                onSuccess={(paymentIntentId) => {
+                  setCart([]);
+                  readCart();
+                  const qp = paymentIntentId
+                    ? `?payment_intent=${encodeURIComponent(paymentIntentId)}`
+                    : "";
+                  router.push(`/checkout/success${qp}`);
+                }}
               />
-            </div>
-
-            <div>
-              <label className="block text-[11px] tracking-[0.28em] uppercase text-stone-500">
-                Card number
-              </label>
-              <input
-                inputMode="numeric"
-                placeholder="1234 5678 9012 3456"
-                className="mt-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-stone-300"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] tracking-[0.28em] uppercase text-stone-500">
-                  Expiry
-                </label>
-                <input
-                  placeholder="MM/YY"
-                  className="mt-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-stone-300"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] tracking-[0.28em] uppercase text-stone-500">
-                  CVV
-                </label>
-                <input
-                  inputMode="numeric"
-                  placeholder="123"
-                  className="mt-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-stone-300"
-                />
-              </div>
-            </div>
-          </div>
+            </Elements>
+          )}
         </div>
 
         <aside className="rounded-xl border border-stone-100 bg-white p-5 h-fit">
@@ -170,19 +304,9 @@ export default function PayClient() {
             <span className="text-lg text-amber-800">{formatMoney(total, currency)}</span>
           </div>
 
-          <button
-            type="button"
-            onClick={onPayNow}
-            disabled={processing}
-            className={[
-              "mt-6 w-full rounded-md px-5 py-3 text-xs tracking-[0.35em] uppercase transition",
-              processing
-                ? "bg-stone-200 text-stone-500 cursor-not-allowed"
-                : "bg-black text-white hover:bg-black/90",
-            ].join(" ")}
-          >
-            {processing ? "Processing..." : "Pay Now"}
-          </button>
+          <div className="mt-6 text-xs text-stone-500">
+            Complete payment in the form.
+          </div>
         </aside>
       </div>
     </section>
