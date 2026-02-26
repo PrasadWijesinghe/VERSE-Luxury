@@ -20,6 +20,11 @@ app.get("/", (req: Request, res: Response) => {
   res.json({ message: "VERSE API running 🚀" });
 });
 
+// Health check route (for CI / monitoring)
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
