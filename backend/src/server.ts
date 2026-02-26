@@ -23,13 +23,14 @@ app.get("/", (req: Request, res: Response) => {
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const portFromEnv = Number(process.env.PORT);
+const PORT = Number.isFinite(portFromEnv) ? portFromEnv : 5000;
 
 async function start() {
   await connectDB();
 
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
