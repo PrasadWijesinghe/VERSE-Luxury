@@ -21,7 +21,7 @@ type UserAddress = {
   phone?: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 function getTokenFromStorage(): string | null {
   if (typeof window === "undefined") return null;
@@ -114,7 +114,7 @@ export default function CheckoutClient() {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/api/users/me/address`, {
+        const res = await fetch(`${API_BASE}/users/me/address`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -208,7 +208,7 @@ export default function CheckoutClient() {
         quantity,
       }));
 
-      const res = await fetch(`${API_BASE}/api/orders`, {
+      const res = await fetch(`${API_BASE}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -527,7 +527,7 @@ export default function CheckoutClient() {
                             phone: phone.trim() || undefined,
                           };
 
-                          const res = await fetch(`${API_BASE}/api/users/me/address`, {
+                          const res = await fetch(`${API_BASE}/users/me/address`, {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",

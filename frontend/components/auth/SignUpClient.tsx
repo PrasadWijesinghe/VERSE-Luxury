@@ -12,7 +12,7 @@ type RegisterResponse = {
 };
 
 const loginImageSrc = "/images/Login/SignUP_IN.png";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export default function SignUpClient() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function SignUpClient() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/auth/register`, {
+      const response = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
