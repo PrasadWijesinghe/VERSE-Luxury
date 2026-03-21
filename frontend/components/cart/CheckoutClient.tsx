@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { products } from "@/data/products";
 import { AUTH_TOKEN_KEY, useAuthSession } from "@/components/account/session";
 import { useCartLines } from "./useCart";
+import { setCart } from "./cartStore";
 import LoginRequiredPopup from "./LoginRequiredPopup";
 
 type UserAddress = {
@@ -92,6 +93,9 @@ export default function CheckoutClient() {
   const [phone, setPhone] = useState("");
   const [savingAddress, setSavingAddress] = useState(false);
 
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -169,6 +173,68 @@ export default function CheckoutClient() {
   const subtotal = useMemo(() => {
     return items.reduce((sum, it) => sum + it.product.price * it.quantity, 0);
   }, [items]);
+
+  // --- Place Order ---
+  async function handlePlaceOrder() {
+    if (placingOrder) return;
+
+    // Must have a confirmed (non-editing) address
+    const shippingAddress = address && !editingAddress ? address : null;
+    if (!shippingAddress) {
+      setOrderError("Please save your shipping address before placing the order.");
+      return;
+    }
+
+    if (items.length === 0) {
+      setOrderError("Your bag is empty.");
+      return;
+    }
+
+    const token = getTokenFromStorage();
+    if (!token) {
+      setLoginPopupOpen(true);
+      return;
+    }
+
+    setPlacingOrder(true);
+    setOrderError(null);
+
+    try {
+      const orderItems = items.map(({ product, quantity }) => ({
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        currency: product.currency,
+        quantity,
+      }));
+
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items: orderItems, shippingAddress }),
+      });
+
+      const data = (await res.json()) as { order?: unknown; message?: string };
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to place order");
+      }
+
+      // Clear the cart
+      setCart([]);
+
+      // Go to success page
+      router.push("/checkout/success");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to place order";
+      setOrderError(msg);
+    } finally {
+      setPlacingOrder(false);
+    }
+  }
 
   if (!authed || !user) {
     return (
@@ -523,7 +589,7 @@ export default function CheckoutClient() {
 
           <div className="mt-5 space-y-3">
             <SummaryRow label="Subtotal" value={formatMoney(subtotal, currency)} />
-            <SummaryRow label="Shipping" value="—" />
+            <SummaryRow label="Shipping" value="Free" />
           </div>
 
           <div className="mt-5 h-px bg-stone-200" />
@@ -535,19 +601,37 @@ export default function CheckoutClient() {
             </span>
           </div>
 
+          {orderError ? (
+            <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {orderError}
+            </div>
+          ) : null}
+
           <button
             type="button"
+            disabled={placingOrder || editingAddress}
             onClick={() => {
               if (!authed || !user) {
                 setLoginPopupOpen(true);
                 return;
               }
-              router.push("/checkout/pay");
+              handlePlaceOrder();
             }}
-            className="mt-6 w-full rounded-md bg-black px-5 py-3 text-xs tracking-[0.35em] uppercase text-white hover:bg-black/90 transition"
+            className={[
+              "mt-6 w-full rounded-md px-5 py-3 text-xs tracking-[0.35em] uppercase transition",
+              placingOrder || editingAddress
+                ? "bg-stone-200 text-stone-500 cursor-not-allowed"
+                : "bg-black text-white hover:bg-black/90",
+            ].join(" ")}
           >
-            Proceed to Pay
+            {placingOrder ? "Placing Order…" : "Place Order"}
           </button>
+
+          {editingAddress && !placingOrder && (
+            <p className="mt-2 text-center text-[11px] text-stone-400">
+              Save your address to continue
+            </p>
+          )}
         </aside>
       </div>
 

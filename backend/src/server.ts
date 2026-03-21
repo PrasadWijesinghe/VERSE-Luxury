@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import orderRoutes from "./routes/orderRoutes";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 
 dotenv.config();
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "VERSE API running 🚀" });
