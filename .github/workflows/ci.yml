@@ -17,6 +17,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Intentional research-demo fault: this manifest is absent from the
+      # repository so the pipeline produces a deterministic deployment-
+      # configuration failure for prediction and XAI diagnosis.
+      - name: Validate production deployment configuration
+        run: docker compose -f docker-compose.production.yml config
+
       - name: Start services
         run: docker compose up -d --build
 
