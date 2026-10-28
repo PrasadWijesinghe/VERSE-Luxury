@@ -1,0 +1,20 @@
+name: Infra demo - unreachable container registry
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registry-outage:
+    name: Intentional registry outage demonstration
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # INTENTIONAL DEMO FAILURE: .invalid is reserved and cannot resolve.
+      # No application files or production resources are modified.
+      - name: Pull image from a deliberately nonexistent registry
+        run: docker pull registry.invalid/verse-demo/application:unavailable
