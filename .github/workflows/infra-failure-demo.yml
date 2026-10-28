@@ -1,0 +1,21 @@
+name: Infra failure demo - unavailable container
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unavailable-container:
+    name: Demo - intentionally unavailable container image
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # INTENTIONAL TEST FAULT: this image does not exist. GitHub Actions should fail
+    # to start the job when it attempts to pull the image from the registry.
+    container: ghcr.io/pipelineiq-demo/infra-test-image-that-does-not-exist:never
+    steps:
+      - name: This step runs only if the container unexpectedly exists
+        run: echo "Unexpected success pulling the demonstration image"
