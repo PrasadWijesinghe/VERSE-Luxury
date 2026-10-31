@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 
+
 jobs:
   registry-outage:
     name: Intentional registry outage demonstration
